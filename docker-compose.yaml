@@ -1,0 +1,12 @@
+version: "3.9"
+
+services:
+  app:
+    image: cloud-engineer:1.0.0
+    container_name: cloud-engineer-app
+    restart: always
+    ports:
+      - "80:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
