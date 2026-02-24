@@ -9,56 +9,65 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
+    permissions:
+      contents: read
 
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      #  Authenticate to GCP
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Login to Artifact Registry
-        uses: docker/login-action@v3
-        with:
-          registry: asia-southeast1-docker.pkg.dev
-          username: _json_key
-          password: ${{ secrets.GCP_SA_KEY }}
+      #  Install gcloud
+      - name: Setup gcloud SDK
+        uses: google-github-actions/setup-gcloud@v2
 
-      - name: Debug who am I
+      #  Configure Docker to use gcloud credential helper
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet
+
+      #  Debug identity (optional but recommended)
+      - name: Debug identity
         run: |
           gcloud auth list
           gcloud config list
 
-      - name: Build Image
+      #  Build image
+      - name: Build Docker image
         run: |
-          docker build -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-repo/cloud-engineer:${{ github.sha }} .
+          docker build \
+            -t asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }} \
+            .
 
-      - name: Push Image
+      #  Push image
+      - name: Push Docker image
         run: |
-          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-repo/cloud-engineer:${{ github.sha }}
+          docker push \
+            asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }}
 
-      # - name: Deploy to Swarm VM
-      #   uses: appleboy/ssh-action@v1.0.3
-      #   with:
-      #     host: ${{ secrets.VM_HOST }}
-      #     username: ${{ secrets.VM_USER }}
-      #     key: ${{ secrets.VM_SSH_KEY }}
-      #     script: |
-      #       sudo docker pull asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-repo/cloud-engineer:${{ github.sha }}
-
-      #       sudo docker service update \
-      #         --image asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-repo/cloud-engineer:${{ github.sha }} \
-      #         --with-registry-auth \
-      #         cloud-engineer \
-      #       || sudo docker service create \
-      #         --name cloud-engineer \
-      #         --publish 80:3000 \
-      #         --with-registry-auth \
-      #         asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-repo/cloud-engineer:${{ github.sha }}
+      #  Deploy to VM via IAP
       - name: Deploy to Swarm VM via IAP
         run: |
           gcloud compute ssh cloud-engineer-vm \
             --zone=asia-southeast1-a \
-            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --project=voltarocks-42-sandbox \
             --tunnel-through-iap \
-            --command="sudo docker pull asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-repo/cloud-engineer:${{ github.sha }} && sudo docker service update --image asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-repo/cloud-engineer:${{ github.sha }} --with-registry-auth cloud-engineer || sudo docker service create --name cloud-engineer --publish 80:3000 --with-registry-auth asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-repo/cloud-engineer:${{ github.sha }}"
+            --command="
+              sudo docker pull asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }} &&
+              sudo docker service update \
+                --image asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }} \
+                --with-registry-auth \
+                --force \
+                cloud-engineer \
+              || \
+              sudo docker service create \
+                --name cloud-engineer \
+                --publish 80:3000 \
+                --with-registry-auth \
+                asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }}
+            "
