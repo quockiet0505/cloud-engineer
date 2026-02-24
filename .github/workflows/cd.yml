@@ -27,7 +27,7 @@ jobs:
 
       - name: Build Image
         run: |
-          docker build -f infra/Dockerfile -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-repo/cloud-engineer:${{ github.sha }} .
+          docker build infra/Dockerfile -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-repo/cloud-engineer:${{ github.sha }} .
 
       - name: Push Image
         run: |
