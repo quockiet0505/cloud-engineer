@@ -59,15 +59,15 @@ jobs:
             --tunnel-through-iap \
             --command="
               sudo docker pull asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }} &&
-              sudo docker service update \
-                --image asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }} \
-                --with-registry-auth \
-                --force \
-                cloud-engineer \
-              || \
-              sudo docker service create \
-                --name cloud-engineer \
-                --publish 80:3000 \
-                --with-registry-auth \
-                asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }}
+              if sudo docker service ls | grep -q cloud-engineer; then
+                sudo docker service update \
+                  --image asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }} \
+                  --force \
+                  cloud-engineer;
+              else
+                sudo docker service create \
+                  --name cloud-engineer \
+                  --publish 80:3000 \
+                  asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }};
+              fi
             "
