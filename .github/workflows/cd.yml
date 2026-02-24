@@ -23,11 +23,11 @@ jobs:
 
       - name: Build Image
         run: |
-          docker build -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-vm/cloud-engineer:${{ github.sha }} .
+          docker build -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-repo/cloud-engineer:${{ github.sha }} .
 
       - name: Push Image
         run: |
-          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-vm/cloud-engineer:${{ github.sha }}
+          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-repo/cloud-engineer:${{ github.sha }}
 
       - name: Deploy to Swarm VM
         uses: appleboy/ssh-action@v1.0.3
@@ -36,14 +36,14 @@ jobs:
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
           script: |
-            sudo docker pull asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-vm/cloud-engineer:${{ github.sha }}
+            sudo docker pull asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-repo/cloud-engineer:${{ github.sha }}
 
             sudo docker service update \
-              --image asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-vm/cloud-engineer:${{ github.sha }} \
+              --image asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-repo/cloud-engineer:${{ github.sha }} \
               --with-registry-auth \
               cloud-engineer \
             || sudo docker service create \
               --name cloud-engineer \
               --publish 80:3000 \
               --with-registry-auth \
-              asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-vm/cloud-engineer:${{ github.sha }}
+              asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-repo/cloud-engineer:${{ github.sha }}
