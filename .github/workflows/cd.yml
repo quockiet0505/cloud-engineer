@@ -23,14 +23,19 @@ jobs:
           registry: asia-southeast1-docker.pkg.dev
           username: _json_key
           password: ${{ secrets.GCP_SA_KEY }}
-          
+
+      - name: Debug who am I
+        run: |
+          gcloud auth list
+          gcloud config list
+
       - name: Build Image
         run: |
           docker build -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-repo/cloud-engineer:${{ github.sha }} .
 
-      - name: Push Image
-        run: |
-          docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-repo/cloud-engineer:${{ github.sha }}
+      # - name: Push Image
+      #   run: |
+      #     docker push asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-repo/cloud-engineer:${{ github.sha }}
 
       - name: Deploy to Swarm VM
         uses: appleboy/ssh-action@v1.0.3
