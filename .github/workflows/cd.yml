@@ -17,13 +17,17 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Configure Docker
-        run: |
-          gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet
+      # login DOCKER using FILE JSON
+      - name: Login to Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          registry: asia-southeast1-docker.pkg.dev
+          username: _json_key
+          password: ${{ secrets.GCP_SA_KEY }}
 
       - name: Build Image
         run: |
-          docker build -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-repo/cloud-engineer:${{ github.sha }} .
+          docker build -f infra/Dockerfile -t asia-southeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/cloud-engineer-repo/cloud-engineer:${{ github.sha }} .
 
       - name: Push Image
         run: |
