@@ -53,7 +53,7 @@ jobs:
       #  Deploy to VM via IAP
       - name: Deploy to Swarm VM via IAP
         run: |
-          gcloud compute ssh cloud-engineer-vm-b9c6bb0 \
+          gcloud compute ssh cloud-engineer-vm-89eda91 \
             --zone=asia-southeast1-a \
             --project=voltarocks-42-sandbox \
             --tunnel-through-iap \
