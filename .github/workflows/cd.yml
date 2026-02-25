@@ -58,7 +58,11 @@ jobs:
             --project=voltarocks-42-sandbox \
             --tunnel-through-iap \
             --command="
+              ACCESS_TOKEN=\$(gcloud auth print-access-token) &&
+              echo \$ACCESS_TOKEN | sudo docker login -u oauth2accesstoken --password-stdin https://asia-southeast1-docker.pkg.dev &&
+
               sudo docker pull asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }} &&
+
               if sudo docker service ls | grep -q cloud-engineer; then
                 sudo docker service update \
                   --image asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }} \
@@ -70,6 +74,6 @@ jobs:
                   --publish 80:3000 \
                   asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }};
               fi
-            "
-      
-     
+            " 
+                  
+                
