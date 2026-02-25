@@ -50,7 +50,34 @@ jobs:
           docker push \
             asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }}
 
-      #  Deploy to VM via IAP
+      # Wait until VM status = RUNNING
+      - name: Wait for VM to be RUNNING
+        run: |
+          echo "Waiting for VM to be RUNNING..."
+          until gcloud compute instances describe cloud-engineer-vm \
+            --zone=asia-southeast1-a \
+            --project=voltarocks-42-sandbox \
+            --format="get(status)" | grep -q RUNNING; do
+              echo "VM not ready yet..."
+              sleep 5
+            done
+          echo "VM is RUNNING."
+
+      # Wait until SSH port is open
+      - name: Wait for SSH to be ready
+        run: |
+          echo "Waiting for SSH (port 22)..."
+          until gcloud compute ssh cloud-engineer-vm \
+            --zone=asia-southeast1-a \
+            --project=voltarocks-42-sandbox \
+            --tunnel-through-iap \
+            --command="echo SSH ready" &>/dev/null; do
+              echo "SSH not ready yet..."
+              sleep 5
+            done
+          echo "SSH is ready."
+
+      # Deploy
       - name: Deploy to Swarm VM via IAP
         run: |
           gcloud compute ssh cloud-engineer-vm \
