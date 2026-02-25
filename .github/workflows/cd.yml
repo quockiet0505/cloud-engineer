@@ -54,7 +54,7 @@ jobs:
       - name: Wait for VM to be RUNNING
         run: |
           echo "Waiting for VM to be RUNNING..."
-          until gcloud compute instances describe cloud-engineer-vm \
+          until gcloud compute instances describe cloud-engineer-vm-89eda91 \
             --zone=asia-southeast1-a \
             --project=voltarocks-42-sandbox \
             --format="get(status)" | grep -q RUNNING; do
@@ -66,12 +66,12 @@ jobs:
       # Wait until SSH port is open
       - name: Wait for SSH to be ready
         run: |
-          echo "Waiting for SSH (port 22)..."
-          until gcloud compute ssh cloud-engineer-vm \
+          echo "Waiting for SSH (port 22) via IAP..."
+          until gcloud compute ssh cloud-engineer-vm-89eda91 \
             --zone=asia-southeast1-a \
             --project=voltarocks-42-sandbox \
             --tunnel-through-iap \
-            --command="echo SSH ready" &>/dev/null; do
+            --command="echo 'SSH ready'" &>/dev/null; do
               echo "SSH not ready yet..."
               sleep 5
             done
@@ -80,28 +80,31 @@ jobs:
       # Deploy
       - name: Deploy to Swarm VM via IAP
         run: |
-          gcloud compute ssh cloud-engineer-vm \
+          gcloud compute ssh cloud-engineer-vm-89eda91 \
             --zone=asia-southeast1-a \
             --project=voltarocks-42-sandbox \
             --tunnel-through-iap \
             --command="
-              echo 'Waiting for Docker...';
+              echo 'Waiting for Docker to be active...';
               until sudo systemctl is-active --quiet docker; do
                 echo 'Docker not ready, waiting...';
                 sleep 5;
               done;
+              echo 'Docker is up and running!';
 
               sudo docker pull asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }} &&
 
               if sudo docker service ls | grep -q cloud-engineer; then
                 sudo docker service update \
                   --image asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }} \
+                  --with-registry-auth \
                   --force \
                   cloud-engineer;
               else
                 sudo docker service create \
                   --name cloud-engineer \
                   --publish 80:3000 \
+                  --with-registry-auth \
                   asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }};
               fi
             "
