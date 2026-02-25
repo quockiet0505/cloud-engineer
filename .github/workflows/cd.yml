@@ -53,12 +53,17 @@ jobs:
       #  Deploy to VM via IAP
       - name: Deploy to Swarm VM via IAP
         run: |
-          gcloud compute ssh cloud-engineer-vm-89eda91 \
+          gcloud compute ssh cloud-engineer-vm \
             --zone=asia-southeast1-a \
             --project=voltarocks-42-sandbox \
             --tunnel-through-iap \
             --command="
-          
+              echo 'Waiting for Docker...';
+              until sudo systemctl is-active --quiet docker; do
+                echo 'Docker not ready, waiting...';
+                sleep 5;
+              done;
+
               sudo docker pull asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }} &&
 
               if sudo docker service ls | grep -q cloud-engineer; then
@@ -71,26 +76,5 @@ jobs:
                   --name cloud-engineer \
                   --publish 80:3000 \
                   asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }};
-             --command="
-                  echo 'Waiting for Docker...';
-                  until sudo systemctl is-active --quiet docker; do
-                    echo 'Docker not ready, waiting...';
-                    sleep 5;
-                  done;
-
-                  sudo docker pull asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }} &&
-
-                  if sudo docker service ls | grep -q cloud-engineer; then
-                    sudo docker service update \
-                      --image asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }} \
-                      --force \
-                      cloud-engineer;
-                  else
-                    sudo docker service create \
-                      --name cloud-engineer \
-                      --publish 80:3000 \
-                      asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }};
-                  fi
-                " 
-                                
-                                
+              fi
+            "
