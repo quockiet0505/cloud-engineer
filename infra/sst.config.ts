@@ -5,7 +5,7 @@ export default $config({
     return {
       name: "cloud-engineer-gce",
       removal: input?.stage === "production" ? "retain" : "remove",
-      home: "local", // store state locally
+      home: "local",
       providers: {
         gcp: {
           project: "voltarocks-42-sandbox",
@@ -19,37 +19,41 @@ export default $config({
   async run() {
     const gcp = await import("@pulumi/gcp");
 
-    // existing service account (used by VM)
-    const vmSaEmail =
-      "github-actions-deploy@voltarocks-42-sandbox.iam.gserviceaccount.com";
-
-    // allow pulling image from Artifact Registry
-    new gcp.projects.IAMMember("artifact-pull-access", {
-      project: "voltarocks-42-sandbox",
-      role: "roles/artifactregistry.reader",
-      member: `serviceAccount:${vmSaEmail}`,
+    //  Create new runtime service account for VM
+    const vmRuntimeSa = new gcp.serviceaccount.Account("vm-runtime-sa", {
+      accountId: "vm-runtime-sa",
+      displayName: "VM Runtime Service Account",
     });
 
-    // open port 80 for web traffic
+    //  Grant ONLY pull permission to VM SA
+    new gcp.projects.IAMMember("vm-artifact-reader", {
+      project: "voltarocks-42-sandbox",
+      role: "roles/artifactregistry.reader",
+      member: vmRuntimeSa.email.apply(
+        (email) => `serviceAccount:${email}`
+      ),
+    });
+
+    //  Firewall HTTP
     new gcp.compute.Firewall("allow-http", {
       network: "default",
       allows: [{ protocol: "tcp", ports: ["80"] }],
       sourceRanges: ["0.0.0.0/0"],
-      targetTags: ["web-server"], // apply only to tagged VMs
+      targetTags: ["web-server"],
     });
 
-    // allow SSH via IAP
+    //  Firewall SSH via IAP
     new gcp.compute.Firewall("allow-iap-ssh", {
       network: "default",
       allows: [{ protocol: "tcp", ports: ["22"] }],
       sourceRanges: ["35.235.240.0/20"],
     });
 
-    // create VM
+    //  Create VM using NEW runtime SA
     const vm = new gcp.compute.Instance("cloud-engineer-vm", {
       zone: "asia-southeast1-a",
       machineType: "e2-micro",
-      tags: ["web-server"], // match firewall tag
+      tags: ["web-server"],
 
       bootDisk: {
         initializeParams: {
@@ -60,22 +64,22 @@ export default $config({
       networkInterfaces: [
         {
           network: "default",
-          accessConfigs: [{}], // assign public IP
+          accessConfigs: [{}],
         },
       ],
 
-      // attach service account
+      //  VM now uses runtime SA (NOT GitHub SA)
       serviceAccount: {
-        email: vmSaEmail,
+        email: vmRuntimeSa.email,
         scopes: ["https://www.googleapis.com/auth/cloud-platform"],
       },
 
-      // install docker + init swarm
       metadataStartupScript: `#!/bin/bash
         apt-get update
-        apt-get install -y docker.io
+        apt-get install -y docker.io google-cloud-cli
         systemctl enable docker
         systemctl start docker
+        gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet
         docker swarm init || true
       `,
     });
