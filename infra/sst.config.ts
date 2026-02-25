@@ -19,6 +19,18 @@ export default $config({
   async run() {
     const gcp = await import("@pulumi/gcp");
 
+    // 1 custom vcp: virtual cloud private
+    const vcp = new gcp.compute.Network("custom-vcp", {
+      autoCreateSubnetworks: false,
+    })
+
+    // 2 create subnet 
+    const subnet = new gcp.compute.Subnetwork("custom-subnet", {
+      ipCidrRange: "10.0.0.0/24",
+      region: "asia-southeast1",
+      network: vcp.id,
+    })
+
     //  Create new runtime service account for VM
     const vmRuntimeSa = new gcp.serviceaccount.Account("vm-runtime-sa", {
       accountId: "vm-runtime-sa",
@@ -36,7 +48,7 @@ export default $config({
 
     //  Firewall HTTP
     new gcp.compute.Firewall("allow-http", {
-      network: "default",
+      network: vcp.id,
       allows: [{ protocol: "tcp", ports: ["80"] }],
       sourceRanges: ["0.0.0.0/0"],
       targetTags: ["web-server"],
@@ -44,7 +56,7 @@ export default $config({
 
     //  Firewall SSH via IAP
     new gcp.compute.Firewall("allow-iap-ssh", {
-      network: "default",
+      network: vcp.id,
       allows: [{ protocol: "tcp", ports: ["22"] }],
       sourceRanges: ["35.235.240.0/20"],
     });
@@ -63,7 +75,8 @@ export default $config({
 
       networkInterfaces: [
         {
-          network: "default",
+          network: vcp.id,
+          subnetwork: subnet.id,
           accessConfigs: [{}],
         },
       ],
@@ -84,11 +97,60 @@ export default $config({
       `,
     });
 
+
+    // load balancer
+    // healthCheck
+    const healthCheck = new gcp.compute.HealthCheck("web-hc", {
+      httpHealthCheck: {
+        port: 80,
+        requestPath: "/status",
+      },
+    });
+
+    // instance group
+    const instanceGroup = new gcp.compute.InstanceGroup("vm-group", {
+      zone: "asia-southeast1-a",
+      instances: [vm.id],
+    });
+
+    // backend service
+    const backendService = new gcp.compute.BackendService("backend-service", {
+      loadBalancingScheme: "EXTERNAL",
+      protocol: "HTTP",
+      healthChecks: healthCheck.id,
+      backends: [
+        {
+          group: instanceGroup.id,
+        },
+      ],
+    });
+
+    // url map 
+    const urlMap = new gcp.compute.URLMap("url-map", {
+      defaultService: backendService.id,
+    });
+
+    // http proxy
+    const httpProxy = new gcp.compute.TargetHttpProxy("http-proxy", {
+      urlMap: urlMap.id,
+    });
+
+    // public ip for load balancer
+    const lbIp = new gcp.compute.GlobalAddress("lb-ip");
+
+    // forwarding rule
+    new gcp.compute.GlobalForwardingRule("http-forwarding-rule", {
+      target: httpProxy.id,
+      portRange: "80",
+      ipAddress: lbIp.address,
+    });
+
     return {
       vmName: vm.name,
-      externalIP: vm.networkInterfaces.apply(
+      vmExternalIP: vm.networkInterfaces.apply(
         (ni) => ni[0]?.accessConfigs?.[0]?.natIp
       ),
+      loadBalancerIP: lbIp.address,
     };
   },
 });
