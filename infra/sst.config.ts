@@ -89,12 +89,12 @@ export default $config({
       //  VM now uses runtime SA (NOT GitHub SA)
       serviceAccount: {
         email: vmRuntimeSa.email,
-        scopes: ["https://www.googleapis.com/auth/devstorage.read_only"],
+        scopes: ["https://www.googleapis.com/auth/cloud-platform"],
       },
 
       metadataStartupScript: `#!/bin/bash
         apt-get update
-        apt-get install -y docker.io google-cloud-cli
+        apt-get install -y docker.io 
         systemctl enable docker
         systemctl start docker
         gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet
