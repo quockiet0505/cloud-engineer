@@ -54,7 +54,7 @@ jobs:
       - name: Wait for VM to be RUNNING
         run: |
           echo "Waiting for VM to be RUNNING..."
-          until gcloud compute instances describe cloud-engineer-vm-2c7ec14 \
+          until gcloud compute instances describe cloud-engineer-vm \
             --zone=asia-southeast1-a \
             --project=voltarocks-42-sandbox \
             --format="get(status)" | grep -q RUNNING; do
@@ -67,7 +67,7 @@ jobs:
       - name: Wait for SSH to be ready
         run: |
           echo "Waiting for SSH (port 22) via IAP..."
-          until gcloud compute ssh cloud-engineer-vm-2c7ec14 \
+          until gcloud compute ssh cloud-engineer-vm \
             --zone=asia-southeast1-a \
             --project=voltarocks-42-sandbox \
             --tunnel-through-iap \
@@ -80,7 +80,7 @@ jobs:
       # Deploy
       - name: Deploy to Swarm VM via IAP
         run: |
-          gcloud compute ssh cloud-engineer-vm-2c7ec14 \
+          gcloud compute ssh cloud-engineer-vm \
             --zone=asia-southeast1-a \
             --project=voltarocks-42-sandbox \
             --tunnel-through-iap \

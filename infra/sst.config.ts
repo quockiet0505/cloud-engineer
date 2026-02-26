@@ -18,6 +18,9 @@ export default $config({
 
   async run() {
     const gcp = await import("@pulumi/gcp");
+    // read file startup.sh
+    const fs = await import("fs");
+    const startupScriptContent = fs.readFileSync("startup.sh", "utf-8");
 
     // 1 custom vcp: virtual cloud private
     const vcp = new gcp.compute.Network("custom-vcp", {
@@ -46,14 +49,22 @@ export default $config({
       ),
     });
 
-    //  Firewall HTTP
+    //  Firewall HTTP 
     new gcp.compute.Firewall("allow-http", {
       network: vcp.id,
       allows: [{ protocol: "tcp", ports: ["80"] }],
       sourceRanges: [
-        "130.211.0.0/22",
-        "35.191.0.0/16",
+        "130.211.0.0/22",  //  IP Google Load Balancer
+        "35.191.0.0/16",  //  IP  Google Health Check
       ],
+      targetTags: ["web-server"],
+    });
+
+    //  Firewall Grafana and PROMETHEUS
+    new gcp.compute.Firewall("allow-grafana", {
+      network: vcp.id,
+      allows: [{ protocol: "tcp", ports: ["3001", "9090"] }],
+      sourceRanges: ["0.0.0.0/0"], //  public
       targetTags: ["web-server"],
     });
 
@@ -66,6 +77,7 @@ export default $config({
 
     //  Create VM using NEW runtime SA
     const vm = new gcp.compute.Instance("cloud-engineer-vm", {
+      name: "cloud-engineer-vm",
       zone: "asia-southeast1-a",
       machineType: "e2-micro",
       tags: ["web-server"],
@@ -92,14 +104,7 @@ export default $config({
         scopes: ["https://www.googleapis.com/auth/cloud-platform"],
       },
 
-      metadataStartupScript: `#!/bin/bash
-        apt-get update
-        apt-get install -y docker.io 
-        systemctl enable docker
-        systemctl start docker
-        gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet
-        docker swarm init || true
-      `,
+      metadataStartupScript: startupScriptContent,
     });
 
 
@@ -115,7 +120,7 @@ export default $config({
     // instance group
     const instanceGroup = new gcp.compute.InstanceGroup("vm-group", {
       zone: "asia-southeast1-a",
-      instances: [vm.id],
+      instances: [vm.selfLink],
     });
 
     // backend service
