@@ -50,7 +50,10 @@ export default $config({
     new gcp.compute.Firewall("allow-http", {
       network: vcp.id,
       allows: [{ protocol: "tcp", ports: ["80"] }],
-      sourceRanges: ["0.0.0.0/0"],
+      sourceRanges: [
+        "130.211.0.0/22",
+        "35.191.0.0/16",
+      ],
       targetTags: ["web-server"],
     });
 
@@ -66,6 +69,8 @@ export default $config({
       zone: "asia-southeast1-a",
       machineType: "e2-micro",
       tags: ["web-server"],
+
+      allowStoppingForUpdate: true,
 
       bootDisk: {
         initializeParams: {
@@ -84,7 +89,7 @@ export default $config({
       //  VM now uses runtime SA (NOT GitHub SA)
       serviceAccount: {
         email: vmRuntimeSa.email,
-        scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+        scopes: ["https://www.googleapis.com/auth/devstorage.read_only"],
       },
 
       metadataStartupScript: `#!/bin/bash
