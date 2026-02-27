@@ -89,11 +89,12 @@ services:
           memory: 128M
 
   # internet and volume
-  networks:
-    app_network:
-      external: true
-  volumes:
-    pgdata:
+networks:
+  app_network:
+    external: true
+
+volumes:
+  pgdata:
 EOF
 
 docker stack deploy -c docker-compose.yml core_stack

@@ -95,9 +95,19 @@ jobs:
               sudo docker pull asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }} &&
 
               if sudo docker service ls | grep -q cloud-engineer; then
+                
+                # check
+                NET_OPT=\"\"
+                if ! sudo docker service inspect cloud-engineer | grep -q 'app_network'; then
+                  echo 'Network not found. Adding app_network...'
+                  NET_OPT=\"--network-add app_network\"
+                else
+                  echo 'Network app_network is already attached. Skipping...'
+                fi
+
                 sudo docker service update \
                   --image asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }} \
-                  --network-add app_network \
+                  \$NET_OPT \
                   --env-add DB_HOST=core_stack_postgres \
                   --env-add DB_PORT=5432 \
                   --env-add DB_USER=admin \
