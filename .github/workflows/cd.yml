@@ -97,14 +97,26 @@ jobs:
               if sudo docker service ls | grep -q cloud-engineer; then
                 sudo docker service update \
                   --image asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }} \
+                  --network-add app_network \
+                  --env-add DB_HOST=postgres \
+                  --env-add DB_PORT=5432 \
+                  --env-add DB_USER=admin \
+                  --env-add DB_PASSWORD=${{ secrets.DB_PASSWORD }} \  
+                  --env-add DB_NAME=appdb \
                   --with-registry-auth \
                   --force \
                   cloud-engineer;
               else
                 sudo docker service create \
                   --name cloud-engineer \
-                  --replicas 2 \
+                  --replicas 1 \
                   --publish 80:3000 \
+                  --network app_network \
+                  --env DB_HOST=postgres \
+                  --env DB_PORT=5432 \
+                  --env DB_USER=admin \
+                  --env DB_PASSWORD=${{ secrets.DB_PASSWORD }} \  
+                  --env DB_NAME=appdb \
                   --restart-condition any \
                   --with-registry-auth \
                   asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }};

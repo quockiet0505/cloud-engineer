@@ -4,12 +4,13 @@
      "type": "module",
      "private": true,
      "devDependencies": {
-       "@types/bun": "latest"
+          "@types/bun": "latest"
      },
      "peerDependencies": {
-       "typescript": "^5"
+          "typescript": "^5"
      },
      "dependencies": {
-       "express": "^5.2.1"
+          "express": "^5.2.1",
+          "pg": "^8.19.0"
      }
-   }
+}

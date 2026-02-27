@@ -20,7 +20,8 @@ export default $config({
     const gcp = await import("@pulumi/gcp");
     // read file startup.sh
     const fs = await import("fs");
-    const startupScriptContent = fs.readFileSync("startup.sh", "utf-8");
+    const rawScript = fs.readFileSync("startup.sh", "utf-8");
+    const startupScriptContent = rawScript.replace(/\r\n/g, '\n');
 
     // 1 custom vcp: virtual cloud private
     const vcp = new gcp.compute.Network("custom-vcp", {
@@ -57,14 +58,6 @@ export default $config({
         "130.211.0.0/22",  //  IP Google Load Balancer
         "35.191.0.0/16",  //  IP  Google Health Check
       ],
-      targetTags: ["web-server"],
-    });
-
-    //  Firewall Grafana and PROMETHEUS
-    new gcp.compute.Firewall("allow-grafana", {
-      network: vcp.id,
-      allows: [{ protocol: "tcp", ports: ["3001", "9090"] }],
-      sourceRanges: ["0.0.0.0/0"], //  public
       targetTags: ["web-server"],
     });
 
