@@ -101,7 +101,7 @@ jobs:
                   --env-add DB_HOST=postgres \
                   --env-add DB_PORT=5432 \
                   --env-add DB_USER=admin \
-                  --env-add DB_PASSWORD=${{ secrets.DB_PASSWORD }} \  
+                  --env-add DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
                   --env-add DB_NAME=appdb \
                   --with-registry-auth \
                   --force \
@@ -115,7 +115,7 @@ jobs:
                   --env DB_HOST=postgres \
                   --env DB_PORT=5432 \
                   --env DB_USER=admin \
-                  --env DB_PASSWORD=${{ secrets.DB_PASSWORD }} \  
+                  --env DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
                   --env DB_NAME=appdb \
                   --restart-condition any \
                   --with-registry-auth \
