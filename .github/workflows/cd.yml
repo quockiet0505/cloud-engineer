@@ -122,7 +122,7 @@ jobs:
                 sudo docker service update \
                   --image asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }} \
                   --label "traefik.enable=true" \
-                  --label "traefik.http.routers.app.rule=PathPrefix(`/`)" \
+                  --label "traefik.http.routers.app.rule=PathPrefix(\`/\`)" \
                   --label "traefik.http.routers.app.priority=1" \
                   --label "traefik.http.services.app.loadbalancer.server.port=3000" \
                   --env-add DB_HOST=core_stack_postgres \
@@ -139,7 +139,7 @@ jobs:
                   --name cloud-engineer \
                   --replicas 1 \
                   --label "traefik.enable=true" \
-                  --label "traefik.http.routers.app.rule=PathPrefix(`/`)" \
+                  --label "traefik.http.routers.app.rule=PathPrefix(\`/\`)" \
                   --label "traefik.http.routers.app.priority=1" \
                   --label "traefik.http.services.app.loadbalancer.server.port=3000" \
                   --network app_network \
