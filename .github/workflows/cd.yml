@@ -78,7 +78,7 @@ jobs:
           echo "SSH is ready."
 
       # Deploy
-      - name: Deploy to Swarm VM via IAP
+      - name: Deploy Cloud Engineer Service
         run: |
           gcloud compute ssh cloud-engineer-vm \
             --zone=asia-southeast1-a \
@@ -87,33 +87,20 @@ jobs:
             --command="
               set -e;
 
-              echo 'Waiting for Docker to be active...';
-              until sudo systemctl is-active --quiet docker; do
-                echo 'Docker not ready, waiting...';
-                sleep 5;
-              done;
-              echo 'Docker is up and running!';
-
-              echo 'Pulling latest image...';
               sudo docker pull asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }};
 
               if sudo docker service ls | grep -q cloud-engineer; then
-                echo 'Updating existing cloud-engineer service...';
-
                 sudo docker service update \
                   --image asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }} \
                   --env-add DB_HOST=core_stack_postgres \
                   --env-add DB_PORT=5432 \
                   --env-add DB_USER=admin \
-                  --env-add DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+                  --env-add DB_PASSWORD='${{ secrets.DB_PASSWORD }}' \
                   --env-add DB_NAME=appdb \
                   --with-registry-auth \
                   --force \
                   cloud-engineer;
-
               else
-                echo 'Creating new cloud-engineer service...';
-
                 sudo docker service create \
                   --name cloud-engineer \
                   --replicas 1 \
@@ -122,23 +109,31 @@ jobs:
                   --env DB_HOST=core_stack_postgres \
                   --env DB_PORT=5432 \
                   --env DB_USER=admin \
-                  --env DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+                  --env DB_PASSWORD='${{ secrets.DB_PASSWORD }}' \
                   --env DB_NAME=appdb \
                   --restart-condition any \
                   --with-registry-auth \
                   asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }};
               fi
-
-              echo 'Injecting SMTP configuration to Grafana...';
-
-              sudo docker service update \
-                --env-add GF_SMTP_ENABLED=true \
-                --env-add GF_SMTP_HOST=smtp.gmail.com:587 \
-                --env-add GF_SMTP_USER==${{ secrets.GRAFANA_SMTP_USER }} \
-                --env-add GF_SMTP_PASSWORD=${{ secrets.GRAFANA_SMTP_PASSWORD }} \
-                --env-add GF_SMTP_FROM_ADDRESS==${{ secrets.GRAFANA_SMTP_USER }} \
-                --force \
-                core_stack_grafana || true;
-
-              echo 'Deployment completed successfully!';
+            "
+      # grafana 
+      - name: Update Grafana SMTP Config
+        run: |
+          gcloud compute ssh cloud-engineer-vm \
+            --zone=asia-southeast1-a \
+            --project=voltarocks-42-sandbox \
+            --tunnel-through-iap \
+            --command="
+              if sudo docker service ls | grep -q core_stack_grafana; then
+                sudo docker service update \
+                  --env-add GF_SMTP_ENABLED=true \
+                  --env-add GF_SMTP_HOST=smtp.gmail.com:587 \
+                  --env-add GF_SMTP_USER='${{ secrets.GRAFANA_SMTP_USER }}' \
+                  --env-add GF_SMTP_PASSWORD='${{ secrets.GRAFANA_SMTP_PASSWORD }}' \
+                  --env-add GF_SMTP_FROM_ADDRESS='${{ secrets.GRAFANA_SMTP_USER }}' \
+                  --force \
+                  core_stack_grafana;
+              else
+                echo 'Grafana service not found. Skipping.';
+              fi
             "
