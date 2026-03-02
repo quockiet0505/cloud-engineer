@@ -78,7 +78,7 @@ jobs:
           echo "SSH is ready."
 
       # Deploy
-            - name: Deploy to Swarm VM via IAP
+      - name: Deploy to Swarm VM via IAP
         run: |
           gcloud compute ssh cloud-engineer-vm \
             --zone=asia-southeast1-a \
