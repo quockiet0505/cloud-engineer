@@ -51,13 +51,33 @@ jobs:
             asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }}
 
  
-      #Get Mig instance 
-      - name: Get MIG instance name
-        id: mig_instance
+      - name: Get MIG instance dynamically
         run: |
-          INSTANCE=$(gcloud compute instance-groups managed list-instances vm-mig \
+          echo "Finding Managed Instance Group..."
+
+          MIG_NAME=$(gcloud compute instance-groups managed list \
+            --zones asia-southeast1-a \
+            --filter="baseInstanceName=cloud-engineer" \
+            --format="value(name)")
+
+          if [ -z "$MIG_NAME" ]; then
+            echo "No MIG found!"
+            exit 1
+          fi
+
+          echo "Found MIG: $MIG_NAME"
+          echo "MIG_NAME=$MIG_NAME" >> $GITHUB_ENV
+
+          INSTANCE=$(gcloud compute instance-groups managed list-instances $MIG_NAME \
             --zone asia-southeast1-a \
             --format="value(instance)" | head -n 1)
+
+          if [ -z "$INSTANCE" ]; then
+            echo "No instance found inside MIG!"
+            exit 1
+          fi
+
+          echo "Using instance: $INSTANCE"
           echo "INSTANCE_NAME=$INSTANCE" >> $GITHUB_ENV
 
       # Wait until VM status = RUNNING
