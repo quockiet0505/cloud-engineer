@@ -66,6 +66,7 @@ export default $config({
       network: vcp.id,
       allows: [{ protocol: "tcp", ports: ["22"] }],
       sourceRanges: ["35.235.240.0/20"],
+      targetTags: ["web-server"],
     });
 
     //  Instance Template 

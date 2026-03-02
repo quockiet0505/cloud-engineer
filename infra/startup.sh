@@ -34,12 +34,8 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
     ports:
-      - target: 80
-        published: 80
-        mode: host
-      - target: 8080
-        published: 8080
-        mode: host
+      - "80:80"
+      - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:

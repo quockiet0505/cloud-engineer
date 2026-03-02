@@ -116,8 +116,6 @@ jobs:
 
           set -e
 
-          sudo docker pull asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }}
-
           if sudo docker service ls | grep -q cloud-engineer; then
             sudo docker service update \
               --image asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }} \
