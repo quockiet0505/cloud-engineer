@@ -6,9 +6,9 @@ systemctl start docker
 gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet
 docker swarm init || true
 
-docker network create -d overlay app_network || true
+docker network create -d overlay --attachable app_network || true
 
-# --- SETUP STACK: MONITORING & DATABASE ---
+#  SETUP STACK: MONITORING & DATABASE 
 mkdir -p /root/monitoring
 cd /root/monitoring
 
@@ -30,12 +30,20 @@ services:
     image: traefik:v3.6
     command:
       - "--api.insecure=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
+      - "--providers.swarm.endpoint=unix:///var/run/docker.sock"
+      - "--providers.swarm.watch=true"
+      - "--providers.swarm.exposedbydefault=false"
+      - "--providers.swarm.network=app_network"
       - "--entrypoints.web.address=:80"
     ports:
-      - "80:80"
-      - "8080:8080"
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: host
+      - target: 8080
+        published: 8080
+        protocol: tcp
+        mode: host
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
@@ -45,7 +53,7 @@ services:
         constraints:
           - node.role == manager
 
-  # 1. Self-Hosted PostgreSQL (Internal Only - No Ports Exposed)
+  # 1. Self-Hosted PostgreSQL (PITR Enabled)
   postgres:
     image: postgres:15-alpine
     environment:
@@ -53,13 +61,18 @@ services:
       POSTGRES_PASSWORD: adminpassword
       POSTGRES_DB: appdb
     volumes:
-      - pgdata:/var/lib/postgresql/data 
+      - pgdata:/var/lib/postgresql/data
+      - wal_archive:/var/lib/postgresql/wal_archive
+    command: >
+      postgres
+      -c wal_level=replica
+      -c archive_mode=on
+      -c archive_timeout=60
+      -c archive_command='test ! -f /var/lib/postgresql/wal_archive/%f && cp %p /var/lib/postgresql/wal_archive/%f'
+      -c max_wal_senders=3
+      -c wal_keep_size=128MB
     networks:
       - app_network
-    deploy:
-      resources:
-        limits:
-          memory: 128M
 
   # 2. Prometheus (Internal Only)
   prometheus:
@@ -122,6 +135,8 @@ networks:
 volumes:
   pgdata:
   grafana_data:
+  wal_archive:
+
 EOF
 
-docker stack deploy -c docker-compose.yml core_stack
+docker stack deploy -c docker-compose.yml core_stack 
