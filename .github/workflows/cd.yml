@@ -121,6 +121,9 @@ jobs:
               if sudo docker service ls | grep -q cloud-engineer; then
                 sudo docker service update \
                   --image asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }} \
+                  --label-add \"traefik.enable=true\" \
+                  --label-add \"traefik.http.routers.app.rule=PathPrefix('/')\" \
+                  --label-add \"traefik.http.services.app.loadbalancer.server.port=3000\" \
                   --env-add DB_HOST=core_stack_postgres \
                   --env-add DB_PORT=5432 \
                   --env-add DB_USER=admin \
@@ -130,10 +133,13 @@ jobs:
                   --force \
                   cloud-engineer;
               else
+                # KHÔNG dùng --publish 80:3000 nữa vì Traefik sẽ lo cổng 80
                 sudo docker service create \
                   --name cloud-engineer \
                   --replicas 1 \
-                  --publish 80:3000 \
+                  --label \"traefik.enable=true\" \
+                  --label \"traefik.http.routers.app.rule=PathPrefix('/')\" \
+                  --label \"traefik.http.services.app.loadbalancer.server.port=3000\" \
                   --network app_network \
                   --env DB_HOST=core_stack_postgres \
                   --env DB_PORT=5432 \

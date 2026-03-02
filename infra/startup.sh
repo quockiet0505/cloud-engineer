@@ -25,6 +25,27 @@ cat << 'EOF' > docker-compose.yml
 version: '3.8'
 
 services:
+  # 0. Traefik (Reverse Proxy for Grafana - Exposes Port 80 Internally Only)
+  traefik:
+    image: traefik:v3.6
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.swarmMode=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - app_network
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+
   # 1. Self-Hosted PostgreSQL (Internal Only - No Ports Exposed)
   postgres:
     image: postgres:15-alpine
@@ -77,24 +98,31 @@ services:
   # 4. Grafana 
   grafana:
     image: grafana/grafana:latest
-    ports:
-      - "3001:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
+      # configure grafana 
+      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s:%(http_port)s/grafana/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    volumes:
+      - grafana_data:/var/lib/grafana  # save data
     networks:
       - app_network
     deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.grafana.rule=PathPrefix(`/grafana`)"
+        - "traefik.http.services.grafana.loadbalancer.server.port=3000"
       resources:
         limits:
-          memory: 128M
+          memory: 512M 
 
-  # internet and volume
 networks:
   app_network:
     external: true
 
 volumes:
   pgdata:
+  grafana_data:
 EOF
 
 docker stack deploy -c docker-compose.yml core_stack
