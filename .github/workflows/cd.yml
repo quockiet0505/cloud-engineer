@@ -50,6 +50,16 @@ jobs:
           docker push \
             asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }}
 
+ 
+      #Get Mig instance 
+      - name: Get MIG instance name
+        id: mig_instance
+        run: |
+          INSTANCE=$(gcloud compute instance-groups managed list-instances vm-mig \
+            --zone asia-southeast1-a \
+            --format="value(instance)" | head -n 1)
+          echo "INSTANCE_NAME=$INSTANCE" >> $GITHUB_ENV
+
       # Wait until VM status = RUNNING
       - name: Wait for VM to be RUNNING
         run: |
@@ -76,15 +86,6 @@ jobs:
               sleep 5
             done
           echo "SSH is ready."
-      
-      #Get Mig instance 
-      - name: Get MIG instance name
-        id: mig_instance
-        run: |
-          INSTANCE=$(gcloud compute instance-groups managed list-instances vm-mig \
-            --zone asia-southeast1-a \
-            --format="value(instance)" | head -n 1)
-          echo "INSTANCE_NAME=$INSTANCE" >> $GITHUB_ENV
 
       # Deploy
       - name: Deploy Cloud Engineer Service
