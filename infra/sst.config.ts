@@ -55,8 +55,8 @@ export default $config({
       network: vcp.id,
       allows: [{ protocol: "tcp", ports: ["80"] }],
       sourceRanges: [
-        "130.211.0.0/22",  //  IP Google Load Balancer
-        "35.191.0.0/16",  //  IP  Google Health Check
+        "130.211.0.0/22", // IP Của Google Load Balancer
+        "35.191.0.0/16"   // IP Của Google Health Check
       ],
       targetTags: ["web-server"],
     });
@@ -114,12 +114,19 @@ export default $config({
     const instanceGroup = new gcp.compute.InstanceGroup("vm-group", {
       zone: "asia-southeast1-a",
       instances: [vm.selfLink],
+      namedPorts: [
+        {
+          name: "http",
+          port: 80,
+        },
+      ],
     });
 
     // backend service
     const backendService = new gcp.compute.BackendService("backend-service", {
       loadBalancingScheme: "EXTERNAL",
       protocol: "HTTP",
+      portName: "http",
       healthChecks: healthCheck.id,
       backends: [
         {
