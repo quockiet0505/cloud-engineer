@@ -25,18 +25,21 @@ cat << 'EOF' > docker-compose.yml
 version: '3.8'
 
 services:
-  # 0. Traefik (Reverse Proxy for Grafana - Exposes Port 80 Internally Only)
+  # 0. Traefik Reverse Proxy
   traefik:
     image: traefik:v3.6
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
-      - "--providers.docker.swarmMode=true"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
     ports:
-      - "80:80"
-      - "8080:8080"
+      - target: 80
+        published: 80
+        mode: host
+      - target: 8080
+        published: 8080
+        mode: host
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
