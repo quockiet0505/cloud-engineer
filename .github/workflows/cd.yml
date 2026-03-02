@@ -67,11 +67,9 @@ jobs:
 
           echo "Found MIG: $MIG_NAME"
 
-          INSTANCE_URL=$(gcloud compute instance-groups managed list-instances $MIG_NAME \
+          INSTANCE=$(gcloud compute instance-groups managed list-instances $MIG_NAME \
             --zone asia-southeast1-a \
-            --format="value(instance)" | head -n 1)
-
-          INSTANCE=$(basename $INSTANCE_URL)
+            --format="value(instance.basename())" | head -n 1)
 
           if [ -z "$INSTANCE" ]; then
             echo "No instance found!"
@@ -79,7 +77,6 @@ jobs:
           fi
 
           echo "Using instance: $INSTANCE"
-
           echo "INSTANCE_NAME=$INSTANCE" >> $GITHUB_ENV
 
       # Wait until VM status = RUNNING
