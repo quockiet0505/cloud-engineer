@@ -54,7 +54,7 @@ jobs:
       - name: Wait for VM to be RUNNING
         run: |
           echo "Waiting for VM to be RUNNING..."
-          until gcloud compute instances describe cloud-engineer-vm \
+          until gcloud compute instances describe ${{ env.INSTANCE_NAME }} \
             --zone=asia-southeast1-a \
             --project=voltarocks-42-sandbox \
             --format="get(status)" | grep -q RUNNING; do
@@ -67,7 +67,7 @@ jobs:
       - name: Wait for SSH to be ready
         run: |
           echo "Waiting for SSH (port 22) via IAP..."
-          until gcloud compute ssh cloud-engineer-vm \
+          until gcloud compute ssh ${{ env.INSTANCE_NAME }} \
             --zone=asia-southeast1-a \
             --project=voltarocks-42-sandbox \
             --tunnel-through-iap \
@@ -76,11 +76,20 @@ jobs:
               sleep 5
             done
           echo "SSH is ready."
+      
+      #Get Mig instance 
+      - name: Get MIG instance name
+        id: mig_instance
+        run: |
+          INSTANCE=$(gcloud compute instance-groups managed list-instances vm-mig \
+            --zone asia-southeast1-a \
+            --format="value(instance)" | head -n 1)
+          echo "INSTANCE_NAME=$INSTANCE" >> $GITHUB_ENV
 
       # Deploy
       - name: Deploy Cloud Engineer Service
         run: |
-          gcloud compute ssh cloud-engineer-vm \
+          gcloud compute ssh ${{ env.INSTANCE_NAME }} \
             --zone=asia-southeast1-a \
             --project=voltarocks-42-sandbox \
             --tunnel-through-iap \
@@ -119,7 +128,7 @@ jobs:
       # grafana 
       - name: Update Grafana SMTP Config
         run: |
-          gcloud compute ssh cloud-engineer-vm \
+          gcloud compute ssh ${{ env.INSTANCE_NAME }} \
             --zone=asia-southeast1-a \
             --project=voltarocks-42-sandbox \
             --tunnel-through-iap \

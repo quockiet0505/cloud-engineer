@@ -26,14 +26,14 @@ export default $config({
     // 1 custom vcp: virtual cloud private
     const vcp = new gcp.compute.Network("custom-vcp", {
       autoCreateSubnetworks: false,
-    })
+    });
 
     // 2 create subnet 
     const subnet = new gcp.compute.Subnetwork("custom-subnet", {
       ipCidrRange: "10.0.0.0/24",
       region: "asia-southeast1",
       network: vcp.id,
-    })
+    });
 
     //  Create new runtime service account for VM
     const vmRuntimeSa = new gcp.serviceaccount.Account("vm-runtime-sa", {
@@ -68,30 +68,24 @@ export default $config({
       sourceRanges: ["35.235.240.0/20"],
     });
 
-    //  Create VM using NEW runtime SA
-    const vm = new gcp.compute.Instance("cloud-engineer-vm", {
-      name: "cloud-engineer-vm",
-      zone: "asia-southeast1-a",
+    //  Instance Template 
+    const instanceTemplate = new gcp.compute.InstanceTemplate("vm-template", {
       machineType: "e2-micro",
+
       tags: ["web-server"],
 
-      allowStoppingForUpdate: true,
+      disks: [{
+        boot: true,
+        autoDelete: true,
+        sourceImage: "debian-cloud/debian-12",
+      }],
 
-      bootDisk: {
-        initializeParams: {
-          image: "debian-cloud/debian-12",
-        },
-      },
+      networkInterfaces: [{
+        network: vcp.id,
+        subnetwork: subnet.id,
+        accessConfigs: [{}],
+      }],
 
-      networkInterfaces: [
-        {
-          network: vcp.id,
-          subnetwork: subnet.id,
-          accessConfigs: [{}],
-        },
-      ],
-
-      //  VM now uses runtime SA (NOT GitHub SA)
       serviceAccount: {
         email: vmRuntimeSa.email,
         scopes: ["https://www.googleapis.com/auth/cloud-platform"],
@@ -100,6 +94,19 @@ export default $config({
       metadataStartupScript: startupScriptContent,
     });
 
+    //  Managed Instance Group 
+    const instanceGroupManager = new gcp.compute.InstanceGroupManager("vm-mig", {
+      zone: "asia-southeast1-a",
+      baseInstanceName: "cloud-engineer",
+      versions: [{
+        instanceTemplate: instanceTemplate.id,
+      }],
+      targetSize: 1,
+      namedPorts: [{
+        name: "http",
+        port: 80,
+      }],
+    });
 
     // load balancer
     // healthCheck
@@ -110,18 +117,6 @@ export default $config({
       },
     });
 
-    // instance group
-    const instanceGroup = new gcp.compute.InstanceGroup("vm-group", {
-      zone: "asia-southeast1-a",
-      instances: [vm.selfLink],
-      namedPorts: [
-        {
-          name: "http",
-          port: 80,
-        },
-      ],
-    });
-
     // backend service
     const backendService = new gcp.compute.BackendService("backend-service", {
       loadBalancingScheme: "EXTERNAL",
@@ -130,7 +125,7 @@ export default $config({
       healthChecks: healthCheck.id,
       backends: [
         {
-          group: instanceGroup.id,
+          group: instanceGroupManager.instanceGroup,
         },
       ],
     });
@@ -156,10 +151,6 @@ export default $config({
     });
 
     return {
-      vmName: vm.name,
-      vmExternalIP: vm.networkInterfaces.apply(
-        (ni) => ni[0]?.accessConfigs?.[0]?.natIp
-      ),
       loadBalancerIP: lbIp.address,
     };
   },
