@@ -86,21 +86,21 @@ jobs:
             --project voltarocks-42-sandbox \
             --tunnel-through-iap \
             --quiet \
-            --command="sudo mkdir -p /tmp/monitoring && sudo chmod 777 /tmp/monitoring"
+            --command="sudo mkdir -p /opt/monitoring"
 
-      # Copy monitoring files
+      # Copy files to home directory
       - name: Copy files to VM
         run: |
           gcloud compute scp \
             infra/monitoring/docker-compose.monitoring.yml \
             infra/monitoring/prometheus.yml \
-            ${{ env.INSTANCE_NAME }}:/tmp/monitoring/ \
+            ${{ env.INSTANCE_NAME }}:~/ \
             --zone asia-southeast1-a \
             --project voltarocks-42-sandbox \
             --tunnel-through-iap \
             --quiet
 
-      # Deploy stack
+      # Move and deploy
       - name: Deploy stack
         run: |
           gcloud compute ssh ${{ env.INSTANCE_NAME }} \
@@ -109,6 +109,8 @@ jobs:
             --tunnel-through-iap \
             --quiet \
             --command="
-              cd /tmp/monitoring &&
+              sudo mv ~/docker-compose.monitoring.yml /opt/monitoring/ &&
+              sudo mv ~/prometheus.yml /opt/monitoring/ &&
+              cd /opt/monitoring &&
               sudo docker stack deploy -c docker-compose.monitoring.yml core_stack
             "
