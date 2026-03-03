@@ -11,14 +11,28 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      #  Authenticate to GCP 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
+          export_default_credentials: true
 
+      # ☁ Setup gcloud
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v2
 
+      #  Set project explicitly 
+      - name: Set project
+        run: gcloud config set project voltarocks-42-sandbox
+
+      #  Debug identity 
+      - name: Debug identity
+        run: |
+          gcloud auth list
+          gcloud config list
+
+      #  Get MIG instance
       - name: Get VM instance
         run: |
           MIG_NAME=$(gcloud compute instance-groups managed list \
@@ -26,19 +40,32 @@ jobs:
             --filter="baseInstanceName=cloud-engineer" \
             --format="value(name)")
 
+          if [ -z "$MIG_NAME" ]; then
+            echo "No MIG found!"
+            exit 1
+          fi
+
           INSTANCE=$(gcloud compute instance-groups managed list-instances $MIG_NAME \
             --zone asia-southeast1-a \
             --format="value(instance.basename())" | head -n 1)
 
+          if [ -z "$INSTANCE" ]; then
+            echo "No instance found!"
+            exit 1
+          fi
+
           echo "INSTANCE_NAME=$INSTANCE" >> $GITHUB_ENV
 
+      #  Prepare directory
       - name: Prepare directory on VM
         run: |
           gcloud compute ssh ${{ env.INSTANCE_NAME }} \
             --zone asia-southeast1-a \
+            --project voltarocks-42-sandbox \
             --tunnel-through-iap \
             --command="mkdir -p ~/monitoring"
 
+      #  Copy files
       - name: Copy files to VM
         run: |
           gcloud compute scp \
@@ -46,12 +73,15 @@ jobs:
             infra/monitoring/prometheus.yml \
             ${{ env.INSTANCE_NAME }}:~/monitoring \
             --zone asia-southeast1-a \
+            --project voltarocks-42-sandbox \
             --tunnel-through-iap
 
+      #  Deploy stack
       - name: Deploy stack
         run: |
           gcloud compute ssh ${{ env.INSTANCE_NAME }} \
             --zone asia-southeast1-a \
+            --project voltarocks-42-sandbox \
             --tunnel-through-iap \
             --command="
               cd ~/monitoring
