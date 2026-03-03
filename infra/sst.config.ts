@@ -50,24 +50,25 @@ export default $config({
       ),
     });
 
-    //  Firewall HTTP and https
-    new gcp.compute.Firewall("allow-http", {
+      //  HTTP & HTTPS  Google Load Balancer
+    new gcp.compute.Firewall("allow-web-from-lb", {
       network: vcp.id,
       allows: [
-        { protocol: "tcp", ports: ["80"] },
-        { protocol: "tcp", ports: ["443"] },
+        { protocol: "tcp", ports: ["80", "443"] },
       ],
       sourceRanges: [
-        "130.211.0.0/22", // IP Của Google Load Balancer
-        "35.191.0.0/16"   // IP Của Google Health Check
+        "130.211.0.0/22",
+        "35.191.0.0/16",
       ],
       targetTags: ["web-server"],
     });
 
-    //  Firewall SSH via IAP
-    new gcp.compute.Firewall("allow-iap-ssh", {
+    // SSH  từ IAP
+    new gcp.compute.Firewall("allow-ssh-from-iap", {
       network: vcp.id,
-      allows: [{ protocol: "tcp", ports: ["22"] }],
+      allows: [
+        { protocol: "tcp", ports: ["22"] },
+      ],
       sourceRanges: ["35.235.240.0/20"],
       targetTags: ["web-server"],
     });
@@ -113,7 +114,7 @@ export default $config({
     
       updatePolicy: {
         type: "PROACTIVE",         
-        minimalAction: "RESTART",   
+        minimalAction: "REPLACE",   
         maxSurgeFixed: 1,          
         maxUnavailableFixed: 1,     
       },
@@ -146,15 +147,42 @@ export default $config({
       defaultService: backendService.id,
     });
 
-    // http proxy
-    const httpProxy = new gcp.compute.TargetHttpProxy("http-proxy", {
-      urlMap: urlMap.id,
-    });
-
-    // public ip for load balancer
+    // Public IP
     const lbIp = new gcp.compute.GlobalAddress("lb-ip");
 
-    // forwarding rule
+    //  Managed SSL Certificate
+    const managedSslCert = new gcp.compute.ManagedSslCertificate("managed-ssl-cert", {
+      managed: {
+        domains: ["duongquockiet.id.vn"],
+      },
+    });
+
+    //  HTTPS Proxy
+    const httpsProxy = new gcp.compute.TargetHttpsProxy("https-proxy", {
+      urlMap: urlMap.id,
+      sslCertificates: [managedSslCert.id],
+    });
+
+    //  Forward rule 443
+    new gcp.compute.GlobalForwardingRule("https-forwarding-rule", {
+      target: httpsProxy.id,
+      portRange: "443",
+      ipAddress: lbIp.address,
+    });
+
+    //  Redirect HTTP -> HTTPS
+    const httpRedirectUrlMap = new gcp.compute.URLMap("http-redirect-map", {
+      defaultUrlRedirect: {
+        httpsRedirect: true,
+        redirectResponseCode: "MOVED_PERMANENTLY_DEFAULT",
+        stripQuery: false,
+      },
+    });
+
+    const httpProxy = new gcp.compute.TargetHttpProxy("http-proxy", {
+      urlMap: httpRedirectUrlMap.id,
+    });
+
     new gcp.compute.GlobalForwardingRule("http-forwarding-rule", {
       target: httpProxy.id,
       portRange: "80",
