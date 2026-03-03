@@ -37,14 +37,14 @@ jobs:
           gcloud compute ssh ${{ env.INSTANCE_NAME }} \
             --zone asia-southeast1-a \
             --tunnel-through-iap \
-            --command="mkdir -p /root/monitoring"
+            --command="mkdir -p ~/monitoring"
 
       - name: Copy files to VM
         run: |
           gcloud compute scp \
             infra/monitoring/docker-compose.monitoring.yml \
             infra/monitoring/prometheus.yml \
-            ${{ env.INSTANCE_NAME }}:/root/monitoring \
+            ${{ env.INSTANCE_NAME }}:~/monitoring \
             --zone asia-southeast1-a \
             --tunnel-through-iap
 
@@ -54,6 +54,6 @@ jobs:
             --zone asia-southeast1-a \
             --tunnel-through-iap \
             --command="
-              cd /root/monitoring
+              cd ~/monitoring
               sudo docker stack deploy -c docker-compose.monitoring.yml core_stack
             "
