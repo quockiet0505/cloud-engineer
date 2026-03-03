@@ -14,35 +14,27 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      #  Authenticate to GCP 
+      #  Authenticate 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
-          project_id: voltarocks-42-sandbox
-          create_credentials_file: true
-          export_environment_variables: true
 
       #  Setup gcloud
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v2
 
-      #  Verify identity 
-      - name: Verify identity
+      #  Debug identity
+      - name: Debug identity
         run: |
-          echo "Authenticated accounts:"
           gcloud auth list
-          echo "Active account:"
-          gcloud config get-value account
-          echo "Project:"
-          gcloud config get-value project
+          gcloud config list
 
-      #  Get MIG instance dynamically
+      #  Get MIG instance
       - name: Get MIG instance
         run: |
-          echo "Finding Managed Instance Group..."
-
           MIG_NAME=$(gcloud compute instance-groups managed list \
+            --project=voltarocks-42-sandbox \
             --zones asia-southeast1-a \
             --filter="baseInstanceName=cloud-engineer" \
             --format="value(name)")
@@ -52,21 +44,14 @@ jobs:
             exit 1
           fi
 
-          echo "Found MIG: $MIG_NAME"
-
           INSTANCE=$(gcloud compute instance-groups managed list-instances $MIG_NAME \
+            --project=voltarocks-42-sandbox \
             --zone asia-southeast1-a \
             --format="value(instance.basename())" | head -n 1)
 
-          if [ -z "$INSTANCE" ]; then
-            echo "No instance found!"
-            exit 1
-          fi
-
-          echo "Using instance: $INSTANCE"
           echo "INSTANCE_NAME=$INSTANCE" >> $GITHUB_ENV
 
-      #  Prepare monitoring directory
+      #  Prepare directory
       - name: Prepare directory on VM
         run: |
           gcloud compute ssh ${{ env.INSTANCE_NAME }} \
@@ -75,7 +60,7 @@ jobs:
             --tunnel-through-iap \
             --command="mkdir -p ~/monitoring"
 
-      #  Copy monitoring files
+      #  Copy files
       - name: Copy files to VM
         run: |
           gcloud compute scp \
@@ -86,7 +71,7 @@ jobs:
             --project voltarocks-42-sandbox \
             --tunnel-through-iap
 
-      #  Deploy Docker Swarm stack
+      #  Deploy
       - name: Deploy stack
         run: |
           gcloud compute ssh ${{ env.INSTANCE_NAME }} \
@@ -94,7 +79,6 @@ jobs:
             --project voltarocks-42-sandbox \
             --tunnel-through-iap \
             --command="
-              set -e
               cd ~/monitoring
               sudo docker stack deploy -c docker-compose.monitoring.yml core_stack
             "
