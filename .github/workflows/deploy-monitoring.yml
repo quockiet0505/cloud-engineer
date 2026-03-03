@@ -71,27 +71,30 @@ jobs:
           echo "Using instance: $INSTANCE"
           echo "INSTANCE_NAME=$INSTANCE" >> $GITHUB_ENV
 
-      #  Prepare monitoring directory
+            # Prepare monitoring directory (system path)
       - name: Prepare directory on VM
         run: |
           gcloud compute ssh ${{ env.INSTANCE_NAME }} \
             --zone asia-southeast1-a \
             --project voltarocks-42-sandbox \
             --tunnel-through-iap \
-            --command="mkdir -p ~/monitoring"
+            --command="
+              sudo mkdir -p /opt/monitoring
+              sudo chown \$USER:\$USER /opt/monitoring
+            "
 
-      #  Copy monitoring files
+      # Copy monitoring files
       - name: Copy files to VM
         run: |
           gcloud compute scp \
             infra/monitoring/docker-compose.monitoring.yml \
             infra/monitoring/prometheus.yml \
-            ${{ env.INSTANCE_NAME }}:~/monitoring \
+            ${{ env.INSTANCE_NAME }}:/opt/monitoring \
             --zone asia-southeast1-a \
             --project voltarocks-42-sandbox \
             --tunnel-through-iap
 
-      #  Deploy Docker Swarm stack
+      # Deploy stack
       - name: Deploy stack
         run: |
           gcloud compute ssh ${{ env.INSTANCE_NAME }} \
@@ -100,6 +103,6 @@ jobs:
             --tunnel-through-iap \
             --command="
               set -e
-              cd ~/monitoring
+              cd /opt/monitoring
               sudo docker stack deploy -c docker-compose.monitoring.yml core_stack
             "
