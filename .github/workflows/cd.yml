@@ -118,6 +118,8 @@ jobs:
 
               IMAGE=asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/cloud-engineer:${{ github.sha }}
 
+              RULE='Host(\`duongquockiet.id.vn\`) || Path(\`/health\`)'
+
               echo 'Pulling image...'
               sudo docker pull \$IMAGE
 
@@ -127,9 +129,11 @@ jobs:
                 sudo docker service update \
                   --image \$IMAGE \
                   --label-rm traefik.http.routers.app.rule \
-                  --label-add traefik.http.routers.app.rule=Host\\(\\\`duongquockiet.id.vn\\\`\\) \
+                  --label-add traefik.http.routers.app.rule=\"\$RULE\" \
                   --label-add traefik.http.routers.app.entrypoints=web \
                   --label-add traefik.enable=true \
+                  --env-rm DB_HOST \
+                  --env-add DB_HOST=core_stack_postgres \
                   --force \
                   cloud-engineer
 
@@ -141,10 +145,10 @@ jobs:
                   --replicas 1 \
                   --network app_network \
                   --label traefik.enable=true \
-                  --label traefik.http.routers.app.rule=Host\\(\\\`duongquockiet.id.vn\\\`\\) \
+                  --label traefik.http.routers.app.rule=\"\$RULE\" \
                   --label traefik.http.routers.app.entrypoints=web \
                   --label traefik.http.services.app.loadbalancer.server.port=3000 \
-                  --env DB_HOST=postgres \
+                  --env DB_HOST=core_stack_postgres \
                   --env DB_PORT=5432 \
                   --env DB_USER=admin \
                   --env DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
@@ -152,6 +156,7 @@ jobs:
                   \$IMAGE
               fi
             "
+            
       # grafana 
       - name: Update Grafana SMTP Config
         run: |

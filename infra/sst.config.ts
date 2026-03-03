@@ -111,13 +111,7 @@ export default $config({
         name: "http",
         port: 80,
       }],
-    
-      updatePolicy: {
-        type: "PROACTIVE",         
-        minimalAction: "REPLACE",   
-        maxSurgeFixed: 1,          
-        maxUnavailableFixed: 1,     
-      },
+  
     });
 
     // load balancer
