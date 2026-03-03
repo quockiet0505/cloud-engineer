@@ -50,10 +50,38 @@ jobs:
 
           echo "INSTANCE_NAME=$INSTANCE" >> $GITHUB_ENV
 
+      # Wait until VM status = RUNNING
+      - name: Wait for VM to be RUNNING
+        run: |
+          echo "Waiting for VM to be RUNNING..."
+          until gcloud compute instances describe ${{ env.INSTANCE_NAME }} \
+            --zone asia-southeast1-a \
+            --project voltarocks-42-sandbox \
+            --format="get(status)" | grep -q RUNNING; do
+              echo "VM not ready yet..."
+              sleep 5
+            done
+          echo "VM is RUNNING."
+
+      # Wait until SSH is ready 
+      - name: Wait for SSH to be ready
+        run: |
+          echo "Waiting for SSH via IAP..."
+          until gcloud compute ssh ${{ env.INSTANCE_NAME }} \
+            --zone asia-southeast1-a \
+            --project voltarocks-42-sandbox \
+            --tunnel-through-iap \
+            --quiet \
+            --command="echo 'SSH ready'" &>/dev/null; do
+              echo "SSH not ready yet..."
+              sleep 5
+            done
+          echo "SSH is ready."
+
       # Prepare monitoring directory
       - name: Prepare directory on VM
         run: |
-          gcloud compute ssh duongquockiet0511@${{ env.INSTANCE_NAME }} \
+          gcloud compute ssh ${{ env.INSTANCE_NAME }} \
             --zone asia-southeast1-a \
             --project voltarocks-42-sandbox \
             --tunnel-through-iap \
@@ -66,7 +94,7 @@ jobs:
           gcloud compute scp \
             infra/monitoring/docker-compose.monitoring.yml \
             infra/monitoring/prometheus.yml \
-            duongquockiet0511@${{ env.INSTANCE_NAME }}:/tmp/monitoring/ \
+            ${{ env.INSTANCE_NAME }}:/tmp/monitoring/ \
             --zone asia-southeast1-a \
             --project voltarocks-42-sandbox \
             --tunnel-through-iap \
@@ -75,7 +103,7 @@ jobs:
       # Deploy stack
       - name: Deploy stack
         run: |
-          gcloud compute ssh duongquockiet0511@${{ env.INSTANCE_NAME }} \
+          gcloud compute ssh ${{ env.INSTANCE_NAME }} \
             --zone asia-southeast1-a \
             --project voltarocks-42-sandbox \
             --tunnel-through-iap \
