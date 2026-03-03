@@ -49,7 +49,7 @@ services:
   prometheus:
     image: prom/prometheus:latest
     volumes:
-      - /root/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - /home/duongquockiet0511/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
     networks:
