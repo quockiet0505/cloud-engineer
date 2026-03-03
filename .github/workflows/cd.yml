@@ -132,7 +132,8 @@ jobs:
                   --replicas 1 \
                   --network app_network \
                   --label traefik.enable=true \
-                  --label traefik.http.routers.app.rule=Host\(duongquockiet.id.vn\) \
+                  --label traefik.http.routers.app.rule=PathPrefix\(\/\) \
+                  --label traefik.http.routers.app.entrypoints=web \
                   --label traefik.http.services.app.loadbalancer.server.port=3000 \
                   --env DB_HOST=postgres \
                   --env DB_PORT=5432 \
