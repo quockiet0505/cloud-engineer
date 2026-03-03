@@ -125,9 +125,9 @@ jobs:
                   --image \$IMAGE \
                   --with-registry-auth \
                   --force \
-                  --label-add 'traefik.enable=true' \
-                  --label-add 'traefik.http.routers.app.rule=Host("duongquockiet.id.vn")' \
-                  --label-add 'traefik.http.services.app.loadbalancer.server.port=3000' \
+                  --label 'traefik.enable=true' \
+                  --label 'traefik.http.routers.app.rule=Host("duongquockiet.id.vn")' \
+                  --label 'traefik.http.services.app.loadbalancer.server.port=3000' \
                   --env-add DB_HOST=core_stack_postgres \
                   --env-add DB_PORT=5432 \
                   --env-add DB_USER=admin \
