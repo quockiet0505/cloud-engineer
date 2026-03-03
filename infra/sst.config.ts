@@ -125,7 +125,7 @@ export default $config({
     const healthCheck = new gcp.compute.HealthCheck("web-hc", {
       httpHealthCheck: {
         port: 80,
-        requestPath: "/",
+        requestPath: "/health",
       },
     });
 
