@@ -43,14 +43,11 @@ jobs:
       # Prepare monitoring directory
       - name: Prepare directory on VM
         run: |
-          gcloud compute ssh duongquockiet0511@${{ env.INSTANCE_NAME }} \
+          gcloud compute ssh ${{ env.INSTANCE_NAME }} \
             --zone asia-southeast1-a \
             --project voltarocks-42-sandbox \
             --tunnel-through-iap \
-            --command="
-              sudo mkdir -p /opt/monitoring &&
-              sudo chown duongquockiet0511:duongquockiet0511 /opt/monitoring
-            "
+            --command="sudo mkdir -p /tmp/monitoring && sudo chmod 777 /tmp/monitoring"
 
       # Copy monitoring files
       - name: Copy files to VM
@@ -58,7 +55,7 @@ jobs:
           gcloud compute scp \
             infra/monitoring/docker-compose.monitoring.yml \
             infra/monitoring/prometheus.yml \
-            duongquockiet0511@${{ env.INSTANCE_NAME }}:/opt/monitoring \
+            ${{ env.INSTANCE_NAME }}:/tmp/monitoring/ \
             --zone asia-southeast1-a \
             --project voltarocks-42-sandbox \
             --tunnel-through-iap
@@ -66,11 +63,11 @@ jobs:
       # Deploy stack
       - name: Deploy stack
         run: |
-          gcloud compute ssh duongquockiet0511@${{ env.INSTANCE_NAME }} \
+          gcloud compute ssh ${{ env.INSTANCE_NAME }} \
             --zone asia-southeast1-a \
             --project voltarocks-42-sandbox \
             --tunnel-through-iap \
             --command="
-              cd /opt/monitoring &&
+              cd /tmp/monitoring &&
               sudo docker stack deploy -c docker-compose.monitoring.yml core_stack
             "
