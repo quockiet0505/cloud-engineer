@@ -50,10 +50,13 @@ export default $config({
       ),
     });
 
-    //  Firewall HTTP 
+    //  Firewall HTTP and https
     new gcp.compute.Firewall("allow-http", {
       network: vcp.id,
-      allows: [{ protocol: "tcp", ports: ["80"] }],
+      allows: [
+        { protocol: "tcp", ports: ["80"] },
+        { protocol: "tcp", ports: ["443"] },
+      ],
       sourceRanges: [
         "130.211.0.0/22", // IP Của Google Load Balancer
         "35.191.0.0/16"   // IP Của Google Health Check
@@ -107,6 +110,13 @@ export default $config({
         name: "http",
         port: 80,
       }],
+    
+      updatePolicy: {
+        type: "PROACTIVE",         
+        minimalAction: "RESTART",   
+        maxSurgeFixed: 1,          
+        maxUnavailableFixed: 1,     
+      },
     });
 
     // load balancer
@@ -114,7 +124,7 @@ export default $config({
     const healthCheck = new gcp.compute.HealthCheck("web-hc", {
       httpHealthCheck: {
         port: 80,
-        requestPath: "/health",
+        requestPath: "/",
       },
     });
 

@@ -25,29 +25,54 @@ cat << 'EOF' > docker-compose.yml
 version: '3.8'
 
 services:
-  # 0. Traefik Reverse Proxy
+  # 0. Traefik Reverse Proxy (HTTPS Enabled)
   traefik:
     image: traefik:v3.6
     command:
-      - "--api.insecure=true"
+      # EntryPoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+
+      # Redirect HTTP → HTTPS
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+
+      # Swarm Provider
       - "--providers.swarm.endpoint=unix:///var/run/docker.sock"
       - "--providers.swarm.watch=true"
       - "--providers.swarm.exposedbydefault=false"
       - "--providers.swarm.network=app_network"
-      - "--entrypoints.web.address=:80"
+
+      # Let's Encrypt
+      - "--certificatesresolvers.le.acme.httpchallenge=true"
+      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.le.acme.email=youremail@gmail.com"
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+
+      # Dashboard
+      - "--api.dashboard=true"
+
     ports:
       - target: 80
         published: 80
+        protocol: tcp
+        mode: host
+      - target: 443
+        published: 443
         protocol: tcp
         mode: host
       - target: 8080
         published: 8080
         protocol: tcp
         mode: host
+
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_letsencrypt:/letsencrypt
+
     networks:
       - app_network
+
     deploy:
       placement:
         constraints:
@@ -136,6 +161,7 @@ volumes:
   pgdata:
   grafana_data:
   wal_archive:
+  traefik_letsencrypt:
 
 EOF
 

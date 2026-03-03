@@ -125,11 +125,11 @@ jobs:
                   --image \$IMAGE \
                   --with-registry-auth \
                   --force \
-                  --label-rm traefik.http.routers.app.rule \
-                  --label-add 'traefik.enable=true' \
-                  --label-add 'traefik.http.routers.app.rule=PathPrefix(\"/\")' \
-                  --label-add 'traefik.http.routers.app.priority=1' \
-                  --label-add 'traefik.http.services.app.loadbalancer.server.port=3000' \
+                  --label 'traefik.enable=true' \
+                  --label 'traefik.http.routers.app.rule=Host("duongquockiet.id.vn")' \
+                  --label 'traefik.http.routers.app.entrypoints=websecure' \
+                  --label 'traefik.http.routers.app.tls.certresolver=le' \
+                  --label 'traefik.http.services.app.loadbalancer.server.port=3000'
                   --env-add DB_HOST=core_stack_postgres \
                   --env-add DB_PORT=5432 \
                   --env-add DB_USER=admin \
@@ -146,9 +146,10 @@ jobs:
                   --with-registry-auth \
                   --network app_network \
                   --label 'traefik.enable=true' \
-                  --label 'traefik.http.routers.app.rule=PathPrefix(\"/\")' \
-                  --label 'traefik.http.routers.app.priority=1' \
-                  --label 'traefik.http.services.app.loadbalancer.server.port=3000' \
+                  --label 'traefik.http.routers.app.rule=Host("duongquockiet.id.vn")' \
+                  --label 'traefik.http.routers.app.entrypoints=websecure' \
+                  --label 'traefik.http.routers.app.tls.certresolver=le' \
+                  --label 'traefik.http.services.app.loadbalancer.server.port=3000'
                   --env DB_HOST=core_stack_postgres \
                   --env DB_PORT=5432 \
                   --env DB_USER=admin \
