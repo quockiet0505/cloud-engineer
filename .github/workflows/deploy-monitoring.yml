@@ -33,20 +33,31 @@ jobs:
             --filter="baseInstanceName=cloud-engineer" \
             --format="value(name)")
 
+          if [ -z "$MIG_NAME" ]; then
+            echo "No MIG found!"
+            exit 1
+          fi
+
           INSTANCE=$(gcloud compute instance-groups managed list-instances $MIG_NAME \
             --project=voltarocks-42-sandbox \
             --zone asia-southeast1-a \
             --format="value(instance.basename())" | head -n 1)
+
+          if [ -z "$INSTANCE" ]; then
+            echo "No instance found!"
+            exit 1
+          fi
 
           echo "INSTANCE_NAME=$INSTANCE" >> $GITHUB_ENV
 
       # Prepare monitoring directory
       - name: Prepare directory on VM
         run: |
-          gcloud compute ssh ${{ env.INSTANCE_NAME }} \
+          gcloud compute ssh duongquockiet0511@${{ env.INSTANCE_NAME }} \
             --zone asia-southeast1-a \
             --project voltarocks-42-sandbox \
             --tunnel-through-iap \
+            --quiet \
             --command="sudo mkdir -p /tmp/monitoring && sudo chmod 777 /tmp/monitoring"
 
       # Copy monitoring files
@@ -55,18 +66,20 @@ jobs:
           gcloud compute scp \
             infra/monitoring/docker-compose.monitoring.yml \
             infra/monitoring/prometheus.yml \
-            ${{ env.INSTANCE_NAME }}:/tmp/monitoring/ \
+            duongquockiet0511@${{ env.INSTANCE_NAME }}:/tmp/monitoring/ \
             --zone asia-southeast1-a \
             --project voltarocks-42-sandbox \
-            --tunnel-through-iap
+            --tunnel-through-iap \
+            --quiet
 
       # Deploy stack
       - name: Deploy stack
         run: |
-          gcloud compute ssh ${{ env.INSTANCE_NAME }} \
+          gcloud compute ssh duongquockiet0511@${{ env.INSTANCE_NAME }} \
             --zone asia-southeast1-a \
             --project voltarocks-42-sandbox \
             --tunnel-through-iap \
+            --quiet \
             --command="
               cd /tmp/monitoring &&
               sudo docker stack deploy -c docker-compose.monitoring.yml core_stack
