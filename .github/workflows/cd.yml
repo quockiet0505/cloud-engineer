@@ -124,7 +124,7 @@ jobs:
               echo 'Pulling image...'
               sudo docker pull \$IMAGE
 
-              if sudo docker service ls | grep -q cloud-engineer; then
+              if sudo docker service ls --filter name=cloud-engineer --format '{{.Name}}' | grep -w cloud-engineer; then
                 echo 'Updating existing service...'
 
                 sudo docker service update \

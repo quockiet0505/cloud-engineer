@@ -109,8 +109,22 @@ jobs:
             --tunnel-through-iap \
             --quiet \
             --command="
-              sudo mv ~/docker-compose.monitoring.yml /opt/monitoring/ &&
-              sudo mv ~/prometheus.yml /opt/monitoring/ &&
-              cd /opt/monitoring &&
+              set -e
+
+              echo 'Login Artifact Registry'
+              sudo gcloud auth configure-docker asia-southeast1-docker.pkg.dev --quiet
+
+              echo 'Pull postgres image'
+              sudo docker pull asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/postgres-walg:15
+
+              echo 'Prepare monitoring folder'
+              sudo mkdir -p /opt/monitoring
+
+              sudo mv ~/docker-compose.monitoring.yml /opt/monitoring/
+              sudo mv ~/prometheus.yml /opt/monitoring/
+
+              cd /opt/monitoring
+
+              echo 'Deploy stack'
               sudo docker stack deploy -c docker-compose.monitoring.yml core_stack
             "
