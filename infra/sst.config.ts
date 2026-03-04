@@ -50,6 +50,23 @@ export default $config({
       ),
     });
 
+
+    // Postgres backup bucket
+    const postgresBackupBucket = new gcp.storage.Bucket("postgres-backup", {
+      name: "voltarocks-postgres-backup",
+      location: "ASIA-SOUTHEAST1",
+      uniformBucketLevelAccess: true,
+    });
+
+
+    new gcp.storage.BucketIAMMember("vm-backup-access", {
+      bucket: postgresBackupBucket.name,
+      role: "roles/storage.objectAdmin",
+      member: vmRuntimeSa.email.apply(
+        (email) => `serviceAccount:${email}`
+      ),
+    });
+
       //  HTTP & HTTPS  Google Load Balancer
     new gcp.compute.Firewall("allow-web-from-lb", {
       network: vcp.id,

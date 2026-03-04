@@ -34,13 +34,27 @@ services:
           - node.role == manager
 
   postgres:
-    image: postgres:15-alpine
+    image: asia-southeast1-docker.pkg.dev/voltarocks-42-sandbox/cloud-engineer-repo/postgres-walg:15
+
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: adminpassword
       POSTGRES_DB: appdb
+
+      WALG_GS_PREFIX: gs://voltarocks-postgres-backup
+      PGDATA: /var/lib/postgresql/data
+      WALG_COMPRESSION_METHOD: zstd
+
     volumes:
       - pgdata:/var/lib/postgresql/data
+
+    command: >
+      postgres
+      -c wal_level=replica
+      -c archive_mode=on
+      -c archive_timeout=60
+      -c archive_command='wal-g wal-push %p'
+
     networks:
       - app_network
 
@@ -50,8 +64,16 @@ services:
       - /opt/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.external-url=/prometheus'
     networks:
       - app_network
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.prometheus.rule=Host(`duongquockiet.id.vn`) && PathPrefix(`/prometheus`)"
+        - "traefik.http.routers.prometheus.priority=100"
+        - "traefik.http.routers.prometheus.entrypoints=web"
+        - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
 
   node-exporter:
     image: prom/node-exporter:latest
@@ -79,7 +101,9 @@ services:
     deploy:
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.grafana.rule=PathPrefix(`/grafana`)"
+        - "traefik.http.routers.grafana.rule=Host(`duongquockiet.id.vn`) && PathPrefix(`/grafana`)"
+        # set priority higher than app service to avoid call node first
+        - "traefik.http.routers.grafana.priority=100"
         - "traefik.http.routers.grafana.entrypoints=web"
         - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
